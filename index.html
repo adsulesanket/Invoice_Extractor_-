@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 10s ease infinite;
+            min-height: 100vh;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .step-indicator {
+            transition: all 0.3s ease;
+        }
+        
+        .step-active .step-circle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .step-completed .step-circle {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            transform: scale(1.02);
+        }
+        
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+        }
+        
+        .loader {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: conic-gradient(#0000 10%, #667eea);
+            mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(1turn) }
+        }
+        
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .data-row {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .data-row:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .custom-input {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .custom-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-left: 4px solid #10b981;
+            color: #065f46;
+        }
+        
+        .info-message {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-left: 4px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-6xl">
+        <!-- Header -->
+        <header class="text-center mb-8 glass-card p-8">
+            <h1 class="text-4xl sm:text-6xl font-bold text-white mb-4">
+                🚀 Invoice Extractor
+            </h1>
+            <p class="text-xl text-white/90 font-medium">Make by Sanket Adsule</p>
+            <div class="mt-6 flex justify-center">
+                <div class="w-20 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"></div>
+            </div>
+        </header>
+
+        <!-- Progress Indicator -->
+        <div class="mb-8 glass-card p-6">
+            <div class="flex justify-between items-center">
+                <div id="step-1-indicator" class="step-indicator step-active flex items-center">
+                    <div class="step-circle w-10 h-10 rounded-full flex items-center justify-center font-bold">1</div>
+                    <span class="ml-3 text-white font-medium hidden sm:inline">Upload</span>
+                </div>
+                <div class="flex-1 h-1 bg-white/30 mx-4">
+                    <div id="progress-bar-1" class="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div id="step-2-indicator" class="step-indicator flex items-center">
+                    <div class="step-circle w-10 h-10 rounded-full bg-white/30 flex items-center justify-center font-bold text-white/70">2</div>
+                    <span class="ml-3 text-white/70 font-medium hidden sm:inline">Extract</span>
+                </div>
+                 <div class="flex-1 h-1 bg-white/30 mx-4">
+                    <div id="progress-bar-2" class="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div id="step-3-indicator" class="step-indicator flex items-center">
+                    <div class="step-circle w-10 h-10 rounded-full bg-white/30 flex items-center justify-center font-bold text-white/70">3</div>
+                    <span class="ml-3 text-white/70 font-medium hidden sm:inline">Review</span>
+                </div>
+                 <div class="flex-1 h-1 bg-white/30 mx-4">
+                    <div id="progress-bar-3" class="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div id="step-4-indicator" class="step-indicator flex items-center">
+                    <div class="step-circle w-10 h-10 rounded-full bg-white/30 flex items-center justify-center font-bold text-white/70">4</div>
+                    <span class="ml-3 text-white/70 font-medium hidden sm:inline">Export</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content">
+            <!-- Step 1: Upload -->
+            <div id="step-1-content" class="content-card p-6 mb-6 fade-in">
+                <h2 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    📤 Upload Invoice
+                </h2>
+                
+                <div id="upload-area" class="upload-area p-8 text-center">
+                    <input type="file" id="file-input" class="hidden" accept="image/*,.pdf">
+                    <div class="text-6xl mb-4">📄</div>
+                    <h3 class="text-xl font-bold mb-2 text-gray-700">Drop your invoice here</h3>
+                    <p class="text-gray-600 mb-4">or click to browse files</p>
+                    <button id="browse-btn" class="btn-primary">Choose File</button>
+                    <p class="text-sm text-gray-500 mt-3">Supports: JPG, PNG, PDF (max 10MB)</p>
+                </div>
+
+                <div id="file-preview" class="mt-6 hidden">
+                    <div class="glass-card p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <span class="text-2xl mr-3">📄</span>
+                                <div>
+                                    <p id="file-name" class="font-medium text-white"></p>
+                                    <p id="file-size" class="text-sm text-white/70"></p>
+                                </div>
+                            </div>
+                            <button id="remove-file" class="btn-danger">Remove</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="processing" class="mt-6 hidden text-center">
+                    <div class="loader mx-auto mb-4"></div>
+                    <p class="text-lg font-medium text-gray-700">Processing your invoice...</p>
+                </div>
+            </div>
+
+            <!-- Step 2: Extraction Results -->
+            <div id="step-2-content" class="content-card p-6 mb-6 hidden">
+                <h2 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    🔍 Extraction Results
+                </h2>
+
+                 <!-- AI Analysis -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">✨ AI Analysis</h3>
+                    <div id="ai-analysis" class="info-message p-4 rounded-lg">
+                        <p>Processing AI analysis...</p>
+                    </div>
+                </div>
+
+                <!-- Key Information -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">📋 Key Information</h3>
+                    <div id="key-info" class="space-y-3">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <!-- Line Items -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">📊 Line Items</h3>
+                    <div id="line-items" class="overflow-x-auto">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+
+                <!-- Custom Fields -->
+                <div>
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">⚙️ Custom Fields</h3>
+                    <div class="flex gap-3 mb-4">
+                        <input type="text" id="custom-field-input" placeholder="e.g., VAT Number, PO Number" class="flex-1 custom-input">
+                        <button id="extract-custom" class="btn-success">Extract</button>
+                    </div>
+                    <div id="custom-fields" class="space-y-3">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Review & Edit -->
+            <div id="step-3-content" class="content-card p-6 mb-6 hidden">
+                <h2 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                    ✏️ Review & Edit
+                </h2>
+                <div id="edit-section">
+                    <!-- Editable form will be generated here -->
+                </div>
+            </div>
+
+            <!-- Step 4: Export -->
+            <div id="step-4-content" class="content-card p-6 mb-6 hidden">
+                <h2 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    📥 Export & Actions
+                </h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button id="export-json" class="btn-primary p-4 text-center">
+                        <div class="text-2xl mb-2">📄</div>
+                        <div>Export JSON</div>
+                    </button>
+                    <button id="export-csv" class="btn-primary p-4 text-center">
+                        <div class="text-2xl mb-2">📊</div>
+                        <div>Export CSV</div>
+                    </button>
+                    <button id="copy-data" class="btn-primary p-4 text-center">
+                        <div class="text-2xl mb-2">📋</div>
+                        <div>Copy to Clipboard</div>
+                    </button>
+                    <button id="draft-email-btn" class="btn-success p-4 text-center">
+                        <div class="text-2xl mb-2">✉️</div>
+                        <div>✨ Draft Reminder Email</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex justify-between items-center glass-card p-4">
+            <button id="prev-btn" class="btn-primary opacity-50" disabled>← Previous</button>
+            <button id="restart-btn" class="btn-danger">🔄 Start Over</button>
+            <button id="next-btn" class="btn-primary opacity-50" disabled>Next →</button>
+        </div>
+
+        <!-- Toast Messages -->
+        <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+        <!-- Email Modal -->
+        <div id="email-modal" class="modal-overlay hidden">
+            <div class="modal-content fade-in">
+                <h2 class="text-2xl font-bold mb-4">Payment Reminder Draft</h2>
+                <textarea id="email-draft" class="w-full h-64 p-2 border rounded custom-input mb-4" readonly></textarea>
+                <div class="flex justify-end gap-4">
+                    <button id="copy-email-btn" class="btn-success">Copy Text</button>
+                    <button id="close-modal-btn" class="btn-danger">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() { // IIFE Wrapper to prevent global scope issues
+        // Application State
+        let currentStep = 1;
+        let uploadedFile = null;
+        let extractedData = {};
+        let rawOcrText = '';
+
+        // DOM Elements
+        const stepContents = {
+            1: document.getElementById('step-1-content'),
+            2: document.getElementById('step-2-content'),
+            3: document.getElementById('step-3-content'),
+            4: document.getElementById('step-4-content'),
+        };
+        const stepIndicators = {
+            1: document.getElementById('step-1-indicator'),
+            2: document.getElementById('step-2-indicator'),
+            3: document.getElementById('step-3-indicator'),
+            4: document.getElementById('step-4-indicator'),
+        };
+        const progressBars = {
+            1: document.getElementById('progress-bar-1'),
+            2: document.getElementById('progress-bar-2'),
+            3: document.getElementById('progress-bar-3'),
+        }
+
+        const fileInput = document.getElementById('file-input');
+        const browseBtn = document.getElementById('browse-btn');
+        const uploadArea = document.getElementById('upload-area');
+        const filePreview = document.getElementById('file-preview');
+        const processing = document.getElementById('processing');
+        const customFieldInput = document.getElementById('custom-field-input');
+        const extractCustomBtn = document.getElementById('extract-custom');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const emailModal = document.getElementById('email-modal');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            updateUIForStep(1);
+        });
+
+        function initializeEventListeners() {
+            browseBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            document.getElementById('remove-file').addEventListener('click', removeFile);
+            setupDragAndDrop();
+            extractCustomBtn.addEventListener('click', extractCustomField);
+            customFieldInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') extractCustomField();
+            });
+            prevBtn.addEventListener('click', () => changeStep(-1));
+            nextBtn.addEventListener('click', () => changeStep(1));
+            restartBtn.addEventListener('click', restart);
+            document.getElementById('export-json').addEventListener('click', () => exportData('json'));
+            document.getElementById('export-csv').addEventListener('click', () => exportData('csv'));
+            document.getElementById('copy-data').addEventListener('click', copyToClipboard);
+            document.getElementById('draft-email-btn').addEventListener('click', draftPaymentReminder);
+            document.getElementById('close-modal-btn').addEventListener('click', () => emailModal.classList.add('hidden'));
+            document.getElementById('copy-email-btn').addEventListener('click', copyEmailDraft);
+        }
+
+        function setupDragAndDrop() {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+            uploadArea.addEventListener('dragenter', () => uploadArea.classList.add('dragover'));
+            uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+            uploadArea.addEventListener('drop', (e) => {
+                uploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFileSelect({ target: { files: e.dataTransfer.files } });
+                }
+            });
+        }
+        
+        function changeStep(direction) {
+            const newStep = currentStep + direction;
+            if (newStep >= 1 && newStep <= 4) {
+                 if (newStep > 1 && !uploadedFile) {
+                    showToast('Please upload and process a file first.', 'error');
+                    return;
+                }
+                updateUIForStep(newStep);
+            }
+        }
+
+        function updateUIForStep(step) {
+            currentStep = step;
+            
+            // Content visibility
+            Object.values(stepContents).forEach(content => content.classList.add('hidden'));
+            if(stepContents[step]) {
+                stepContents[step].classList.remove('hidden');
+                stepContents[step].classList.add('fade-in');
+            }
+
+            // Indicator styles
+            for (let i = 1; i <= 4; i++) {
+                const indicator = stepIndicators[i];
+                indicator.classList.remove('step-active', 'step-completed');
+                indicator.querySelector('.step-circle').classList.remove('bg-gradient-to-r');
+                indicator.querySelector('.step-circle').classList.add('bg-white/30');
+                 indicator.querySelector('span').classList.add('text-white/70');
+
+                if (i < step) {
+                    indicator.classList.add('step-completed');
+                } else if (i === step) {
+                    indicator.classList.add('step-active');
+                    indicator.querySelector('span').classList.remove('text-white/70');
+                }
+            }
+            
+            // Progress bar
+            for (let i = 1; i <= 3; i++) {
+                progressBars[i].style.width = (i < step) ? '100%' : '0%';
+            }
+
+
+            // Navigation buttons
+            prevBtn.disabled = step === 1;
+            nextBtn.disabled = step === 4 || !uploadedFile;
+            prevBtn.classList.toggle('opacity-50', prevBtn.disabled);
+            nextBtn.classList.toggle('opacity-50', nextBtn.disabled);
+        }
+
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 10 * 1024 * 1024) {
+                showToast('File size must be under 10MB.', 'error');
+                return;
+            }
+            uploadedFile = file;
+            showFilePreview(file);
+            await processFile(file);
+        }
+
+        function showFilePreview(file) {
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('file-size').textContent = formatFileSize(file.size);
+            filePreview.classList.remove('hidden');
+            filePreview.classList.add('fade-in');
+        }
+
+        function removeFile() {
+            uploadedFile = null;
+            fileInput.value = '';
+            filePreview.classList.add('hidden');
+            extractedData = {};
+            updateUIForStep(1);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+        }
+
+        async function processFile(file) {
+            processing.classList.remove('hidden');
+            try {
+                const base64 = await fileToBase64(file);
+                const ocrText = await callGeminiAPI("Extract all text from this invoice image, preserving layout.", base64);
+                if (ocrText) {
+                    rawOcrText = ocrText;
+                    await extractInvoiceData(ocrText);
+                    updateUIForStep(2);
+                    showToast('Invoice processed successfully!', 'success');
+                }
+            } catch (error) {
+                showToast(`Error processing file: ${error.message}`, 'error');
+            } finally {
+                processing.classList.add('hidden');
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function extractInvoiceData(ocrText) {
+            try {
+                const schema = {
+                    type: "OBJECT",
+                    properties: {
+                        keyInfo: {
+                            type: "OBJECT",
+                            properties: {
+                                invoiceNumber: { type: "STRING" },
+                                invoiceDate: { type: "STRING" },
+                                dueDate: { type: "STRING" },
+                                totalAmount: { type: "STRING" },
+                                subtotal: { type: "STRING" },
+                                tax: { type: "STRING" },
+                                supplierName: { type: "STRING" },
+                                supplierAddress: { type: "STRING" },
+                                customerName: { type: "STRING" },
+                                customerAddress: { type: "STRING" }
+                            }
+                        },
+                        lineItems: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    description: { type: "STRING" },
+                                    quantity: { type: "STRING" },
+                                    unitPrice: { type: "STRING" },
+                                    total: { type: "STRING" }
+                                }
+                            }
+                        }
+                    }
+                };
+                const prompt = `Extract structured data from this invoice text: ${ocrText}`;
+                const result = await callGeminiAPI(prompt, null, schema);
+                const parsedResult = JSON.parse(result);
+                
+                extractedData = {
+                    keyInfo: parsedResult.keyInfo || {},
+                    lineItems: parsedResult.lineItems || [],
+                    customFields: {}
+                };
+                renderExtractionResults();
+                renderEditableForm();
+                summarizeAndVerify(); // New Feature Call
+            } catch (error) {
+                console.error('Extraction error:', error);
+                showToast(`Error extracting data: ${error.message}`, 'error');
+            }
+        }
+
+        function renderExtractionResults() {
+            const keyInfoContainer = document.getElementById('key-info');
+            keyInfoContainer.innerHTML = '';
+            Object.entries(extractedData.keyInfo).forEach(([key, value]) => {
+                if (value && String(value).trim()) {
+                    keyInfoContainer.innerHTML += `
+                        <div class="data-row p-3 fade-in">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium text-gray-700">${formatFieldName(key)}:</span>
+                                <span class="text-gray-900 font-semibold">${value}</span>
+                            </div>
+                        </div>`;
+                }
+            });
+
+            const lineItemsContainer = document.getElementById('line-items');
+            if (extractedData.lineItems.length > 0) {
+                lineItemsContainer.innerHTML = `
+                    <div class="overflow-x-auto glass-card p-2">
+                        <table class="min-w-full">
+                            <thead class="table-header"><tr>
+                                <th class="py-3 px-4 text-left rounded-tl-lg">Description</th>
+                                <th class="py-3 px-4 text-center">Qty</th>
+                                <th class="py-3 px-4 text-right">Unit Price</th>
+                                <th class="py-3 px-4 text-right rounded-tr-lg">Total</th>
+                            </tr></thead>
+                            <tbody class="bg-white/80">
+                                ${extractedData.lineItems.map(item => `
+                                    <tr class="border-b hover:bg-gray-50/50">
+                                        <td class="py-3 px-4">${item.description || 'N/A'}</td>
+                                        <td class="py-3 px-4 text-center">${item.quantity || 'N/A'}</td>
+                                        <td class="py-3 px-4 text-right">${item.unitPrice || 'N/A'}</td>
+                                        <td class="py-3 px-4 text-right font-semibold">${item.total || 'N/A'}</td>
+                                    </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
+            } else {
+                lineItemsContainer.innerHTML = '<p class="text-gray-500 text-center py-8">No line items found.</p>';
+            }
+        }
+        
+        function renderEditableForm() {
+            const editSection = document.getElementById('edit-section');
+            let formHTML = '<div class="space-y-4">';
+
+            // Key Info fields
+            formHTML += '<h3 class="text-lg font-semibold border-b pb-2">Key Information</h3>';
+            Object.entries(extractedData.keyInfo).forEach(([key, value]) => {
+                formHTML += `
+                    <div class="grid grid-cols-3 gap-4 items-center">
+                        <label class="font-medium col-span-1">${formatFieldName(key)}</label>
+                        <input type="text" data-type="keyInfo" data-key="${key}" value="${value || ''}" class="custom-input col-span-2">
+                    </div>`;
+            });
+
+            // Line Items fields
+            formHTML += '<h3 class="text-lg font-semibold border-b pb-2 mt-6">Line Items</h3>';
+            extractedData.lineItems.forEach((item, index) => {
+                formHTML += `<div class="p-4 border rounded-lg space-y-2">`;
+                formHTML += `<p class="font-semibold">Item ${index + 1}</p>`;
+                Object.entries(item).forEach(([key, value]) => {
+                    formHTML += `
+                        <div class="grid grid-cols-3 gap-4 items-center">
+                            <label class="font-medium col-span-1">${formatFieldName(key)}</label>
+                            <input type="text" data-type="lineItems" data-index="${index}" data-key="${key}" value="${value || ''}" class="custom-input col-span-2">
+                        </div>`;
+                });
+                formHTML += `</div>`;
+            });
+            
+             // Custom Fields
+            if (Object.keys(extractedData.customFields).length > 0) {
+                 formHTML += '<h3 class="text-lg font-semibold border-b pb-2 mt-6">Custom Fields</h3>';
+                 Object.entries(extractedData.customFields).forEach(([key, value]) => {
+                    formHTML += `
+                        <div class="grid grid-cols-3 gap-4 items-center">
+                            <label class="font-medium col-span-1">${key}</label>
+                            <input type="text" data-type="customFields" data-key="${key}" value="${value || ''}" class="custom-input col-span-2">
+                        </div>`;
+                });
+            }
+
+
+            formHTML += '<button id="save-edits-btn" class="btn-success mt-6">Save Changes</button>';
+            formHTML += '</div>';
+            editSection.innerHTML = formHTML;
+            
+            document.getElementById('save-edits-btn').addEventListener('click', saveEdits);
+        }
+        
+        function saveEdits() {
+            const inputs = document.querySelectorAll('#edit-section input');
+            inputs.forEach(input => {
+                const { type, key, index } = input.dataset;
+                if (type === 'keyInfo') {
+                    extractedData.keyInfo[key] = input.value;
+                } else if (type === 'lineItems') {
+                    extractedData.lineItems[index][key] = input.value;
+                } else if (type === 'customFields') {
+                    extractedData.customFields[key] = input.value;
+                }
+            });
+            renderExtractionResults(); // Re-render the display with updated data
+            showToast('Changes saved successfully!', 'success');
+        }
+
+
+        async function extractCustomField() {
+            const fieldName = customFieldInput.value.trim();
+            if (!fieldName) {
+                showToast('Please enter a field name.', 'error');
+                return;
+            }
+            try {
+                const prompt = `From this invoice text, find and extract the value for "${fieldName}": ${rawOcrText}`;
+                const result = await callGeminiAPI(prompt);
+                extractedData.customFields[fieldName] = result;
+                
+                const container = document.getElementById('custom-fields');
+                container.innerHTML += `
+                    <div class="data-row p-3 fade-in">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-gray-700">${fieldName}:</span>
+                            <span class="text-gray-900 font-semibold">${result}</span>
+                        </div>
+                    </div>`;
+                customFieldInput.value = '';
+                showToast('Custom field extracted!', 'success');
+                renderEditableForm(); // Update the edit form
+            } catch (error) {
+                showToast(`Error extracting custom field: ${error.message}`, 'error');
+            }
+        }
+
+        async function summarizeAndVerify() {
+            const analysisContainer = document.getElementById('ai-analysis');
+            try {
+                const prompt = `Based on the following extracted invoice data, provide a one-sentence summary and then verify if the totals add up correctly. Check if sum of line item totals equals the subtotal, and if subtotal plus tax equals the total amount. Point out any discrepancies. Data: ${JSON.stringify(extractedData)}`;
+                const result = await callGeminiAPI(prompt);
+                analysisContainer.innerHTML = `<p>${result.replace(/\n/g, '<br>')}</p>`;
+            } catch (error) {
+                analysisContainer.innerHTML = `<p class="text-red-500">Could not generate AI analysis. ${error.message}</p>`;
+            }
+        }
+
+        async function draftPaymentReminder() {
+            try {
+                const { customerName, supplierName, totalAmount, dueDate, invoiceNumber } = extractedData.keyInfo;
+                const prompt = `Draft a polite and professional payment reminder email. The customer is ${customerName}, the invoice is from ${supplierName} for the amount of ${totalAmount}, due on ${dueDate}. The invoice number is ${invoiceNumber}.`;
+                const emailDraft = await callGeminiAPI(prompt);
+                document.getElementById('email-draft').value = emailDraft;
+                emailModal.classList.remove('hidden');
+            } catch (error) {
+                showToast(`Could not draft email: ${error.message}`, 'error');
+            }
+        }
+        
+        function copyEmailDraft() {
+            const emailText = document.getElementById('email-draft');
+            emailText.select();
+            document.execCommand('copy');
+            showToast('Email draft copied to clipboard!', 'success');
+        }
+
+        function formatFieldName(key) {
+            return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        }
+
+        function exportData(format) {
+            const dataStr = format === 'json' ? JSON.stringify(extractedData, null, 2) : convertToCSV(extractedData);
+            const blob = new Blob([dataStr], { type: `text/${format}` });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `invoice_data.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Data exported as ${format.toUpperCase()}`, 'success');
+        }
+
+        function convertToCSV(data) {
+            const headers = ['Description', 'Quantity', 'Unit Price', 'Total'];
+            const rows = data.lineItems.map(item => 
+                [item.description, item.quantity, item.unitPrice, item.total].join(',')
+            );
+            return [headers.join(','), ...rows].join('\n');
+        }
+        
+        function copyToClipboard() {
+            const dataStr = JSON.stringify(extractedData, null, 2);
+            const textarea = document.createElement('textarea');
+            textarea.value = dataStr;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('Data copied to clipboard!', 'success');
+        }
+        
+        function restart() {
+            uploadedFile = null;
+            fileInput.value = '';
+            filePreview.classList.add('hidden');
+            extractedData = {};
+            rawOcrText = '';
+            document.getElementById('key-info').innerHTML = '';
+            document.getElementById('line-items').innerHTML = '';
+            document.getElementById('custom-fields').innerHTML = '';
+            document.getElementById('edit-section').innerHTML = '';
+            document.getElementById('ai-analysis').innerHTML = '<p>Processing AI analysis...</p>';
+            updateUIForStep(1);
+        }
+
+        function showToast(message, type = 'info') {
+            const colors = {
+                info: 'info-message',
+                success: 'success-message',
+                error: 'error-message',
+            };
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-lg shadow-lg fade-in ${colors[type]}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        async function callGeminiAPI(prompt, imageData = null, jsonSchema = null) {
+            const apiKey = ""; // API key is handled by the environment.
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            let contents = [{ role: "user", parts: [{ text: prompt }] }];
+            if (imageData) {
+                contents[0].parts.push({ inlineData: { mimeType: "image/png", data: imageData } });
+            }
+
+            const payload = { contents };
+            if (jsonSchema) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: jsonSchema
+                };
+            }
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`API Error: ${response.status} - ${errorBody}`);
+            }
+
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                return result.candidates[0].content.parts[0].text;
+            } else {
+                console.error("Unexpected API response structure:", result);
+                if (result.promptFeedback && result.promptFeedback.blockReason) {
+                    throw new Error(`Request blocked: ${result.promptFeedback.blockReason}. ${result.promptFeedback.blockReasonMessage || ''}`);
+                }
+                throw new Error("Could not extract text from API response.");
+            }
+        }
+    })(); // End of IIFE Wrapper
+    </script>
+</body>
+</html>
