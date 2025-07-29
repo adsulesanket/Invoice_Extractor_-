@@ -894,7 +894,7 @@
         }
         
         async function callGeminiAPI(prompt, imageData = null, jsonSchema = null) {
-            const apiKey = ""; // API key is handled by the environment.
+            const apiKey = "AIzaSyDc8NJ7PUPk9L0dVI5TKgOTRUMsFQxrTD0"; // API key is handled by the environment.
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             
             let contents = [{ role: "user", parts: [{ text: prompt }] }];
@@ -932,7 +932,7 @@
                 throw new Error("Could not extract text from API response.");
             }
         }
-    })(); // End of IIFE Wrapper
+    })(); 
     </script>
 </body>
 </html>
